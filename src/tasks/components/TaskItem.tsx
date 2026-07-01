@@ -90,7 +90,7 @@ export function TaskItem({ task, onToggle, onDelete, onRename }: Props) {
         </span>
       )}
 
-      <div className="ml-auto flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100">
+      <div className="ml-auto flex gap-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
         <button
           onClick={startEdit}
           aria-label="Edit task"
