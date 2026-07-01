@@ -4,24 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import toastSlice from '../../app/toastSlice'
-import { store } from '../../app/store'
 import { tasksApi } from './tasksApi'
-
-// ─── shared store tests ───────────────────────────────────────────────────────
-
-describe('store', () => {
-  it('registers the tasksApi slice', () => {
-    expect(store.getState()).toHaveProperty('tasksApi')
-  })
-
-  it('initialises tasksApi with no queries or mutations registered', () => {
-    const { tasksApi: api } = store.getState()
-
-    expect(api.queries).toEqual({})
-    expect(api.mutations).toEqual({})
-    expect(api.config.reducerPath).toBe('tasksApi')
-  })
-})
 
 // ─── mutation helpers ─────────────────────────────────────────────────────────
 
@@ -50,18 +33,36 @@ function getCachedTasks(s: ReturnType<typeof makeStore>) {
 }
 
 async function storeWithTasks() {
-  server.use(http.get('*/tasks', () => HttpResponse.json(initialTasks)))
+  server.use(http.get('http://localhost/tasks', () => HttpResponse.json(initialTasks)))
   const s = makeStore()
   await s.dispatch(tasksApi.endpoints.getTasks.initiate())
   return s
 }
+
+// ─── store shape ──────────────────────────────────────────────────────────────
+
+describe('store', () => {
+  it('registers the tasksApi slice', () => {
+    const s = makeStore()
+    expect(s.getState()).toHaveProperty('tasksApi')
+  })
+
+  it('initialises tasksApi with no queries or mutations registered', () => {
+    const s = makeStore()
+    const { tasksApi: api } = s.getState()
+
+    expect(api.queries).toEqual({})
+    expect(api.mutations).toEqual({})
+    expect(api.config.reducerPath).toBe('tasksApi')
+  })
+})
 
 // ─── addTask ──────────────────────────────────────────────────────────────────
 
 describe('addTask', () => {
   it('adds a temp entry to the cache optimistically', async () => {
     const s = await storeWithTasks()
-    server.use(http.post('*/tasks', () => new Promise(() => {})))
+    server.use(http.post('http://localhost/tasks', () => new Promise(() => {})))
 
     s.dispatch(tasksApi.endpoints.addTask.initiate({ text: 'New task' }))
 
@@ -73,7 +74,7 @@ describe('addTask', () => {
   it('replaces the temp entry with the real task on success', async () => {
     const s = await storeWithTasks()
     const realTask = { id: 'real-id', text: 'New task', completed: false, createdDate: 9999 }
-    server.use(http.post('*/tasks', () => HttpResponse.json(realTask)))
+    server.use(http.post('http://localhost/tasks', () => HttpResponse.json(realTask)))
 
     await s.dispatch(tasksApi.endpoints.addTask.initiate({ text: 'New task' }))
     await waitFor(() => {
@@ -88,7 +89,7 @@ describe('addTask', () => {
 
   it('reverts the cache when the server returns an error', async () => {
     const s = await storeWithTasks()
-    server.use(http.post('*/tasks', () => HttpResponse.error()))
+    server.use(http.post('http://localhost/tasks', () => HttpResponse.error()))
 
     s.dispatch(tasksApi.endpoints.addTask.initiate({ text: 'New task' }))
 
@@ -102,7 +103,7 @@ describe('addTask', () => {
 describe('updateTaskText', () => {
   it('patches task text in the cache optimistically', async () => {
     const s = await storeWithTasks()
-    server.use(http.post('*/tasks/1', () => new Promise(() => {})))
+    server.use(http.post('http://localhost/tasks/1', () => new Promise(() => {})))
 
     s.dispatch(tasksApi.endpoints.updateTaskText.initiate({ id: '1', text: 'Updated' }))
 
@@ -111,7 +112,7 @@ describe('updateTaskText', () => {
 
   it('reverts the cache when the server returns an error', async () => {
     const s = await storeWithTasks()
-    server.use(http.post('*/tasks/1', () => HttpResponse.error()))
+    server.use(http.post('http://localhost/tasks/1', () => HttpResponse.error()))
 
     s.dispatch(tasksApi.endpoints.updateTaskText.initiate({ id: '1', text: 'Updated' }))
 
@@ -126,7 +127,7 @@ describe('updateTaskText', () => {
 describe('completeTask', () => {
   it('patches completed: true in the cache optimistically', async () => {
     const s = await storeWithTasks()
-    server.use(http.post('*/tasks/1/complete', () => new Promise(() => {})))
+    server.use(http.post('http://localhost/tasks/1/complete', () => new Promise(() => {})))
 
     s.dispatch(tasksApi.endpoints.completeTask.initiate('1'))
 
@@ -137,7 +138,7 @@ describe('completeTask', () => {
 
   it('reverts the cache when the server returns an error', async () => {
     const s = await storeWithTasks()
-    server.use(http.post('*/tasks/1/complete', () => HttpResponse.error()))
+    server.use(http.post('http://localhost/tasks/1/complete', () => HttpResponse.error()))
 
     s.dispatch(tasksApi.endpoints.completeTask.initiate('1'))
 
@@ -155,11 +156,11 @@ describe('incompleteTask', () => {
       { id: '1', text: 'Buy milk', completed: true, createdDate: 1000, completedDate: 5000 },
       { id: '2', text: 'Walk dog', completed: false, createdDate: 2000 },
     ]
-    server.use(http.get('*/tasks', () => HttpResponse.json(completedTasks)))
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.json(completedTasks)))
     const s = makeStore()
     await s.dispatch(tasksApi.endpoints.getTasks.initiate())
 
-    server.use(http.post('*/tasks/1/incomplete', () => new Promise(() => {})))
+    server.use(http.post('http://localhost/tasks/1/incomplete', () => new Promise(() => {})))
     s.dispatch(tasksApi.endpoints.incompleteTask.initiate('1'))
 
     const task = getCachedTasks(s).find((t) => t.id === '1')
@@ -171,11 +172,11 @@ describe('incompleteTask', () => {
     const completedTasks = [
       { id: '1', text: 'Buy milk', completed: true, createdDate: 1000, completedDate: 5000 },
     ]
-    server.use(http.get('*/tasks', () => HttpResponse.json(completedTasks)))
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.json(completedTasks)))
     const s = makeStore()
     await s.dispatch(tasksApi.endpoints.getTasks.initiate())
 
-    server.use(http.post('*/tasks/1/incomplete', () => HttpResponse.error()))
+    server.use(http.post('http://localhost/tasks/1/incomplete', () => HttpResponse.error()))
     s.dispatch(tasksApi.endpoints.incompleteTask.initiate('1'))
 
     await waitFor(() =>
@@ -189,7 +190,7 @@ describe('incompleteTask', () => {
 describe('deleteTask', () => {
   it('removes the task from the cache optimistically', async () => {
     const s = await storeWithTasks()
-    server.use(http.delete('*/tasks/1', () => new Promise(() => {})))
+    server.use(http.delete('http://localhost/tasks/1', () => new Promise(() => {})))
 
     s.dispatch(tasksApi.endpoints.deleteTask.initiate('1'))
 
@@ -200,7 +201,7 @@ describe('deleteTask', () => {
 
   it('reverts the cache when the server returns an error', async () => {
     const s = await storeWithTasks()
-    server.use(http.delete('*/tasks/1', () => HttpResponse.error()))
+    server.use(http.delete('http://localhost/tasks/1', () => HttpResponse.error()))
 
     s.dispatch(tasksApi.endpoints.deleteTask.initiate('1'))
 

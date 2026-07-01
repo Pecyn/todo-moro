@@ -28,7 +28,7 @@ function renderWithStore() {
 
 describe('TaskList', () => {
   it('shows a loading state while GET /tasks is pending', () => {
-    server.use(http.get('*/tasks', () => new Promise(() => {})))
+    server.use(http.get('http://localhost/tasks', () => new Promise(() => {})))
 
     renderWithStore()
 
@@ -37,7 +37,7 @@ describe('TaskList', () => {
 
   it('renders the task list when GET /tasks resolves successfully', async () => {
     server.use(
-      http.get('*/tasks', () =>
+      http.get('http://localhost/tasks', () =>
         HttpResponse.json([
           { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
           { id: '2', text: 'Walk the dog', completed: true, createdDate: 2, completedDate: 3 },
@@ -52,7 +52,7 @@ describe('TaskList', () => {
   })
 
   it('renders an error state when GET /tasks returns a network error', async () => {
-    server.use(http.get('*/tasks', () => HttpResponse.error()))
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.error()))
 
     renderWithStore()
 
