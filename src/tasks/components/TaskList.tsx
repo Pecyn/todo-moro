@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   useCompleteTaskMutation,
   useDeleteTaskMutation,
@@ -38,18 +39,27 @@ export function TaskList() {
     <>
       <AddTaskForm />
       <ul className="flex flex-col gap-2 mt-4">
-        {data?.map((task) => (
-          <li key={task.id}>
-            <TaskItem
-              task={task}
-              onToggle={(id) =>
-                task.completed ? incompleteTask(id) : completeTask(id)
-              }
-              onDelete={(id) => deleteTask(id)}
-              onRename={(id, text) => updateTaskText({ id, text })}
-            />
-          </li>
-        ))}
+        <AnimatePresence mode="popLayout">
+          {data?.map((task) => (
+            <motion.li
+              key={task.id}
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: 48 }}
+              transition={{ duration: 0.18 }}
+              layout
+            >
+              <TaskItem
+                task={task}
+                onToggle={(id) =>
+                  task.completed ? incompleteTask(id) : completeTask(id)
+                }
+                onDelete={(id) => deleteTask(id)}
+                onRename={(id, text) => updateTaskText({ id, text })}
+              />
+            </motion.li>
+          ))}
+        </AnimatePresence>
       </ul>
     </>
   )
