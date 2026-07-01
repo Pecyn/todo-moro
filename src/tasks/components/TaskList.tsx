@@ -37,12 +37,14 @@ export function TaskList() {
   return (
     <>
       <AddTaskForm />
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2 mt-4">
         {data?.map((task) => (
           <li key={task.id}>
             <TaskItem
               task={task}
-              onToggle={(id) => task.completed ? incompleteTask(id) : completeTask(id)}
+              onToggle={(id) =>
+                task.completed ? incompleteTask(id) : completeTask(id)
+              }
               onDelete={(id) => deleteTask(id)}
               onRename={(id, text) => updateTaskText({ id, text })}
             />
