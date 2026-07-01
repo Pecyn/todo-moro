@@ -2,9 +2,9 @@
 
 ## Phase 1 — Core functionality
 
-- [ ] Redux store + RTK Query API slice covering all endpoints from `docs/openapi.json`
+- [x] Redux store + RTK Query API slice covering all endpoints from `docs/openapi.json`
 - [ ] Task list UI (add, rename, delete, toggle complete) with loading state for the slow `GET /tasks`
-- [ ] Optimistic updates on all single-item mutations, with revert on failure
+- [x] Optimistic updates on all single-item mutations, with revert on failure
 
 ## Phase 2 — Filtering, bulk actions, UI polish
 

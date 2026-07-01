@@ -1,10 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { useDispatch, useSelector } from 'react-redux'
 import { tasksApi } from '../tasks/api/tasksApi'
+import toastSlice from './toastSlice'
 
 export const store = configureStore({
   reducer: {
     [tasksApi.reducerPath]: tasksApi.reducer,
+    toast: toastSlice.reducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(tasksApi.middleware),
 })
