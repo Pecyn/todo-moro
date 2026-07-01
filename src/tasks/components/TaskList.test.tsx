@@ -4,10 +4,19 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { Provider } from 'react-redux'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import toastSlice from '../../app/toastSlice'
 import { tasksApi } from '../api/tasksApi'
 import { TaskList } from './TaskList'
+
+vi.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    li: (props: React.HTMLAttributes<HTMLLIElement>) => <li {...props} />,
+    circle: (props: React.SVGProps<SVGCircleElement>) => <circle {...props} />,
+    path: (props: React.SVGProps<SVGPathElement>) => <path {...props} />,
+  },
+}))
 
 const server = setupServer()
 
@@ -148,5 +157,66 @@ describe('TaskList', () => {
 
     await user.click(await screen.findByRole('button', { name: /delete/i }))
     await waitFor(() => expect(deleteCalled).toBe(true))
+  })
+
+  it('only active tasks are shown when the Active filter is selected', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: true, createdDate: 2, completedDate: 3 },
+        ])
+      )
+    )
+
+    renderWithStore()
+
+    await screen.findByText('Buy milk')
+    await user.click(screen.getByRole('button', { name: /^active$/i }))
+
+    expect(screen.getByText('Buy milk')).toBeInTheDocument()
+    expect(screen.queryByText('Walk dog')).not.toBeInTheDocument()
+  })
+
+  it('only completed tasks are shown when the Done filter is selected', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: true, createdDate: 2, completedDate: 3 },
+        ])
+      )
+    )
+
+    renderWithStore()
+
+    await screen.findByText('Buy milk')
+    await user.click(screen.getByRole('button', { name: /^done$/i }))
+
+    expect(screen.queryByText('Buy milk')).not.toBeInTheDocument()
+    expect(screen.getByText('Walk dog')).toBeInTheDocument()
+  })
+
+  it('all tasks are shown when switching back to the All filter', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: true, createdDate: 2, completedDate: 3 },
+        ])
+      )
+    )
+
+    renderWithStore()
+
+    await screen.findByText('Buy milk')
+    await user.click(screen.getByRole('button', { name: /^active$/i }))
+    await user.click(screen.getByRole('button', { name: /^all$/i }))
+
+    expect(screen.getByText('Buy milk')).toBeInTheDocument()
+    expect(screen.getByText('Walk dog')).toBeInTheDocument()
   })
 })

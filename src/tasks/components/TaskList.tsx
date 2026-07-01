@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { useState } from 'react'
 import {
   useCompleteTaskMutation,
   useDeleteTaskMutation,
@@ -6,7 +7,9 @@ import {
   useIncompleteTaskMutation,
   useUpdateTaskTextMutation,
 } from '../api/tasksApi'
+import type { Filter } from '../types'
 import { AddTaskForm } from './AddTaskForm'
+import { Footer } from './Footer'
 import { TaskItem } from './TaskItem'
 
 export function TaskList() {
@@ -15,6 +18,8 @@ export function TaskList() {
   const [incompleteTask] = useIncompleteTaskMutation()
   const [deleteTask] = useDeleteTaskMutation()
   const [updateTaskText] = useUpdateTaskTextMutation()
+  const [filter, setFilter] = useState<Filter>('all')
+  const [isBulkLoading, setIsBulkLoading] = useState(false)
 
   if (isLoading) {
     return (
@@ -35,18 +40,43 @@ export function TaskList() {
     return <p>Something went wrong while loading tasks.</p>
   }
 
+  const allTasks = data ?? []
+  const filteredTasks = allTasks.filter((t) =>
+    filter === 'active' ? !t.completed : filter === 'done' ? t.completed : true
+  )
+
+  async function handleCompleteAllVisible() {
+    const active = filteredTasks.filter((t) => !t.completed)
+    setIsBulkLoading(true)
+    try {
+      await Promise.allSettled(active.map((t) => completeTask(t.id)))
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }
+
+  async function handleClearDone() {
+    const done = allTasks.filter((t) => t.completed)
+    setIsBulkLoading(true)
+    try {
+      await Promise.allSettled(done.map((t) => deleteTask(t.id)))
+    } finally {
+      setIsBulkLoading(false)
+    }
+  }
+
   return (
     <>
       <AddTaskForm />
       <ul className="flex flex-col gap-2 mt-4">
         <AnimatePresence mode="popLayout">
-          {data?.map((task) => (
+          {filteredTasks.map((task) => (
             <motion.li
               key={task.id}
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: 48 }}
-              transition={{ duration: 0.18 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
               layout
             >
               <TaskItem
@@ -61,6 +91,14 @@ export function TaskList() {
           ))}
         </AnimatePresence>
       </ul>
+      <Footer
+        tasks={allTasks}
+        filter={filter}
+        onFilterChange={setFilter}
+        onClearDone={handleClearDone}
+        onCompleteAllVisible={handleCompleteAllVisible}
+        isBulkLoading={isBulkLoading}
+      />
     </>
   )
 }

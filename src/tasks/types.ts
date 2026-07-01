@@ -7,3 +7,5 @@ export interface Task {
 }
 
 export type NewTask = Pick<Task, 'text'>
+
+export type Filter = 'all' | 'active' | 'done'
