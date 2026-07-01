@@ -58,4 +58,27 @@ describe('TaskList', () => {
 
     expect(await screen.findByText(/something went wrong/i)).toBeInTheDocument()
   })
+
+  it('renders an edit button for each task returned by GET /tasks', async () => {
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk the dog', completed: false, createdDate: 2 },
+        ])
+      )
+    )
+
+    renderWithStore()
+
+    expect(await screen.findAllByRole('button', { name: /edit/i })).toHaveLength(2)
+  })
+
+  it('renders 3 skeleton cards while GET /tasks is pending', () => {
+    server.use(http.get('http://localhost/tasks', () => new Promise(() => {})))
+
+    renderWithStore()
+
+    expect(screen.getAllByTestId('task-skeleton')).toHaveLength(3)
+  })
 })
