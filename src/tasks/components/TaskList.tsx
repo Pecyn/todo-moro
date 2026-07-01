@@ -91,6 +91,7 @@ export function TaskList() {
           ))}
         </AnimatePresence>
       </ul>
+      <motion.div layout>
       <Footer
         tasks={allTasks}
         filter={filter}
@@ -99,6 +100,7 @@ export function TaskList() {
         onCompleteAllVisible={handleCompleteAllVisible}
         isBulkLoading={isBulkLoading}
       />
+      </motion.div>
     </>
   )
 }

@@ -12,6 +12,7 @@ import { TaskList } from './TaskList'
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
+    div: (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} />,
     li: (props: React.HTMLAttributes<HTMLLIElement>) => <li {...props} />,
     circle: (props: React.SVGProps<SVGCircleElement>) => <circle {...props} />,
     path: (props: React.SVGProps<SVGPathElement>) => <path {...props} />,
