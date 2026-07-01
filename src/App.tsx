@@ -1,3 +1,4 @@
+import { Toast } from './app/Toast'
 import { TaskList } from './tasks/components/TaskList'
 
 function App() {
@@ -7,6 +8,7 @@ function App() {
         <h1 className="mb-6 text-2xl font-bold">My tasks</h1>
         <TaskList />
       </div>
+      <Toast />
     </main>
   )
 }

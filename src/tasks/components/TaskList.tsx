@@ -1,8 +1,19 @@
-import { useGetTasksQuery } from '../api/tasksApi'
+import {
+  useCompleteTaskMutation,
+  useDeleteTaskMutation,
+  useGetTasksQuery,
+  useIncompleteTaskMutation,
+  useUpdateTaskTextMutation,
+} from '../api/tasksApi'
+import { AddTaskForm } from './AddTaskForm'
 import { TaskItem } from './TaskItem'
 
 export function TaskList() {
   const { data, isLoading, isError } = useGetTasksQuery()
+  const [completeTask] = useCompleteTaskMutation()
+  const [incompleteTask] = useIncompleteTaskMutation()
+  const [deleteTask] = useDeleteTaskMutation()
+  const [updateTaskText] = useUpdateTaskTextMutation()
 
   if (isLoading) {
     return (
@@ -24,17 +35,20 @@ export function TaskList() {
   }
 
   return (
-    <ul className="flex flex-col gap-2">
-      {data?.map((task) => (
-        <li key={task.id}>
-          <TaskItem
-            task={task}
-            onToggle={() => {}}
-            onDelete={() => {}}
-            onRename={() => {}}
-          />
-        </li>
-      ))}
-    </ul>
+    <>
+      <AddTaskForm />
+      <ul className="flex flex-col gap-2">
+        {data?.map((task) => (
+          <li key={task.id}>
+            <TaskItem
+              task={task}
+              onToggle={(id) => task.completed ? incompleteTask(id) : completeTask(id)}
+              onDelete={(id) => deleteTask(id)}
+              onRename={(id, text) => updateTaskText({ id, text })}
+            />
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
