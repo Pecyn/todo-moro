@@ -16,9 +16,15 @@ import { TaskItem } from './TaskItem'
 import { TaskListEmptyState } from './TaskListEmptyState'
 import { TaskListErrorState } from './TaskListErrorState'
 
-function buildBulkErrorMessage(action: 'complete' | 'delete', failed: number, total: number): string {
+function buildBulkErrorMessage(
+  action: 'complete' | 'delete',
+  failed: number,
+  total: number
+): string {
   if (failed === total) {
-    return action === 'complete' ? 'Failed to complete all tasks.' : 'Failed to delete all tasks.'
+    return action === 'complete'
+      ? 'Failed to complete all tasks.'
+      : 'Failed to delete all tasks.'
   }
   return action === 'complete'
     ? `Failed to complete ${failed} of ${total} tasks.`
@@ -33,7 +39,11 @@ export function TaskList() {
   const [deleteTask] = useDeleteTaskMutation()
   const [updateTaskText] = useUpdateTaskTextMutation()
   const [filter, setFilter] = useState<Filter>('all')
-  const [isBulkLoading, setIsBulkLoading] = useState(false)
+  // Tracks which bulk action is currently running (not just whether one is),
+  // so the Footer can show a loading label only on the button that's actually active.
+  const [bulkAction, setBulkAction] = useState<'complete' | 'clear' | null>(
+    null
+  )
 
   // isLoading is only true for the very first fetch (no cached data yet); it stays
   // false on a refetch() call, so isFetching is needed too to cover the retry window.
@@ -45,7 +55,7 @@ export function TaskList() {
           <div
             key={i}
             data-testid="task-skeleton"
-            className="h-14 animate-pulse rounded-lg border border-gray-200 p-4"
+            className="h-14 animate-pulse rounded-lg border border-gray-200 bg-gray-100 p-4"
           />
         ))}
       </div>
@@ -63,33 +73,39 @@ export function TaskList() {
 
   async function handleCompleteAllVisible() {
     const active = filteredTasks.filter((t) => !t.completed)
-    setIsBulkLoading(true)
+    setBulkAction('complete')
     try {
       const results = await Promise.allSettled(
         active.map((t) => completeTask({ id: t.id, silent: true }).unwrap())
       )
       const failedCount = results.filter((r) => r.status === 'rejected').length
       if (failedCount > 0) {
-        dispatch(showToast(buildBulkErrorMessage('complete', failedCount, active.length)))
+        dispatch(
+          showToast(
+            buildBulkErrorMessage('complete', failedCount, active.length)
+          )
+        )
       }
     } finally {
-      setIsBulkLoading(false)
+      setBulkAction(null)
     }
   }
 
   async function handleClearDone() {
     const done = allTasks.filter((t) => t.completed)
-    setIsBulkLoading(true)
+    setBulkAction('clear')
     try {
       const results = await Promise.allSettled(
         done.map((t) => deleteTask({ id: t.id, silent: true }).unwrap())
       )
       const failedCount = results.filter((r) => r.status === 'rejected').length
       if (failedCount > 0) {
-        dispatch(showToast(buildBulkErrorMessage('delete', failedCount, done.length)))
+        dispatch(
+          showToast(buildBulkErrorMessage('delete', failedCount, done.length))
+        )
       }
     } finally {
-      setIsBulkLoading(false)
+      setBulkAction(null)
     }
   }
 
@@ -126,14 +142,14 @@ export function TaskList() {
         </ul>
       )}
       <motion.div layout>
-      <Footer
-        tasks={allTasks}
-        filter={filter}
-        onFilterChange={setFilter}
-        onClearDone={handleClearDone}
-        onCompleteAllVisible={handleCompleteAllVisible}
-        isBulkLoading={isBulkLoading}
-      />
+        <Footer
+          tasks={allTasks}
+          filter={filter}
+          onFilterChange={setFilter}
+          onClearDone={handleClearDone}
+          onCompleteAllVisible={handleCompleteAllVisible}
+          bulkAction={bulkAction}
+        />
       </motion.div>
     </>
   )

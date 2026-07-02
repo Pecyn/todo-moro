@@ -96,6 +96,15 @@ describe('addTask', () => {
     expect(getCachedTasks(s)).toHaveLength(3)
     await waitFor(() => expect(getCachedTasks(s)).toHaveLength(2))
   })
+
+  it('dispatches showToast with the generic message when the server returns an error', async () => {
+    const s = await storeWithTasks()
+    server.use(http.post('http://localhost/tasks', () => HttpResponse.error()))
+
+    s.dispatch(tasksApi.endpoints.addTask.initiate({ text: 'New task' }))
+
+    await waitFor(() => expect(s.getState().toast.message).toBe('Something went wrong.'))
+  })
 })
 
 // ─── updateTaskText ───────────────────────────────────────────────────────────
@@ -119,6 +128,15 @@ describe('updateTaskText', () => {
     await waitFor(() =>
       expect(getCachedTasks(s).find((t) => t.id === '1')?.text).toBe('Buy milk')
     )
+  })
+
+  it('dispatches showToast with the generic message when the server returns an error', async () => {
+    const s = await storeWithTasks()
+    server.use(http.post('http://localhost/tasks/1', () => HttpResponse.error()))
+
+    s.dispatch(tasksApi.endpoints.updateTaskText.initiate({ id: '1', text: 'Updated' }))
+
+    await waitFor(() => expect(s.getState().toast.message).toBe('Something went wrong.'))
   })
 })
 
@@ -203,6 +221,20 @@ describe('incompleteTask', () => {
     await waitFor(() =>
       expect(getCachedTasks(s).find((t) => t.id === '1')?.completed).toBe(true)
     )
+  })
+
+  it('dispatches showToast with the generic message when the server returns an error', async () => {
+    const completedTasks = [
+      { id: '1', text: 'Buy milk', completed: true, createdDate: 1000, completedDate: 5000 },
+    ]
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.json(completedTasks)))
+    const s = makeStore()
+    await s.dispatch(tasksApi.endpoints.getTasks.initiate())
+
+    server.use(http.post('http://localhost/tasks/1/incomplete', () => HttpResponse.error()))
+    s.dispatch(tasksApi.endpoints.incompleteTask.initiate('1'))
+
+    await waitFor(() => expect(s.getState().toast.message).toBe('Something went wrong.'))
   })
 })
 
