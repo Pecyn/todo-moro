@@ -21,5 +21,4 @@
 ## Phase 3 — Quality & delivery
 
 - [x] Test coverage audit — fill gaps (empty states, error states)
-- [ ] README (setup, architecture decisions, trade-offs)
-- [ ] Verify CI passes on main after final merge
+- [x] README (setup, architecture decisions, trade-offs)
