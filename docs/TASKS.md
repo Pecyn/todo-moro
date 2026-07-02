@@ -11,12 +11,12 @@
 - [x] Filtering (all / active / done) and completed count
 - [x] Bulk actions — complete all visible, clear completed
       (loading state + Promise.allSettled, not optimistic — conscious trade-off)
-- [ ] Bulk action error feedback — toast when any bulk operation fails
+- [x] Bulk action error feedback — toast when any bulk operation fails
 - [x] Tailwind styling per approved design, mobile responsive
 - [x] Framer Motion animations + checkmark draw animation
 - [x] Error handling — toast on single-item mutation failure
-- [ ] Empty state UI — when task list is empty
-- [ ] Error state UI — when GET /tasks fails (currently renders but unstyled)
+- [x] Empty state UI — when task list is empty
+- [x] Error state UI — when GET /tasks fails (currently renders but unstyled)
 
 ## Phase 3 — Quality & delivery
 

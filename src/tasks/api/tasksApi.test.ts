@@ -129,7 +129,7 @@ describe('completeTask', () => {
     const s = await storeWithTasks()
     server.use(http.post('http://localhost/tasks/1/complete', () => new Promise(() => {})))
 
-    s.dispatch(tasksApi.endpoints.completeTask.initiate('1'))
+    s.dispatch(tasksApi.endpoints.completeTask.initiate({ id: '1' }))
 
     const task = getCachedTasks(s).find((t) => t.id === '1')
     expect(task?.completed).toBe(true)
@@ -140,11 +140,32 @@ describe('completeTask', () => {
     const s = await storeWithTasks()
     server.use(http.post('http://localhost/tasks/1/complete', () => HttpResponse.error()))
 
-    s.dispatch(tasksApi.endpoints.completeTask.initiate('1'))
+    s.dispatch(tasksApi.endpoints.completeTask.initiate({ id: '1' }))
 
     await waitFor(() =>
       expect(getCachedTasks(s).find((t) => t.id === '1')?.completed).toBe(false)
     )
+  })
+
+  it('dispatches showToast with the generic message when the server returns an error', async () => {
+    const s = await storeWithTasks()
+    server.use(http.post('http://localhost/tasks/1/complete', () => HttpResponse.error()))
+
+    s.dispatch(tasksApi.endpoints.completeTask.initiate({ id: '1' }))
+
+    await waitFor(() => expect(s.getState().toast.message).toBe('Something went wrong.'))
+  })
+
+  it('does not dispatch a toast when silent is true, even on error', async () => {
+    const s = await storeWithTasks()
+    server.use(http.post('http://localhost/tasks/1/complete', () => HttpResponse.error()))
+
+    await s.dispatch(tasksApi.endpoints.completeTask.initiate({ id: '1', silent: true }))
+
+    await waitFor(() =>
+      expect(getCachedTasks(s).find((t) => t.id === '1')?.completed).toBe(false)
+    )
+    expect(s.getState().toast.message).toBeNull()
   })
 })
 
@@ -192,7 +213,7 @@ describe('deleteTask', () => {
     const s = await storeWithTasks()
     server.use(http.delete('http://localhost/tasks/1', () => new Promise(() => {})))
 
-    s.dispatch(tasksApi.endpoints.deleteTask.initiate('1'))
+    s.dispatch(tasksApi.endpoints.deleteTask.initiate({ id: '1' }))
 
     const tasks = getCachedTasks(s)
     expect(tasks).toHaveLength(1)
@@ -203,8 +224,27 @@ describe('deleteTask', () => {
     const s = await storeWithTasks()
     server.use(http.delete('http://localhost/tasks/1', () => HttpResponse.error()))
 
-    s.dispatch(tasksApi.endpoints.deleteTask.initiate('1'))
+    s.dispatch(tasksApi.endpoints.deleteTask.initiate({ id: '1' }))
 
     await waitFor(() => expect(getCachedTasks(s)).toHaveLength(2))
+  })
+
+  it('dispatches showToast with the generic message when the server returns an error', async () => {
+    const s = await storeWithTasks()
+    server.use(http.delete('http://localhost/tasks/1', () => HttpResponse.error()))
+
+    s.dispatch(tasksApi.endpoints.deleteTask.initiate({ id: '1' }))
+
+    await waitFor(() => expect(s.getState().toast.message).toBe('Something went wrong.'))
+  })
+
+  it('does not dispatch a toast when silent is true, even on error', async () => {
+    const s = await storeWithTasks()
+    server.use(http.delete('http://localhost/tasks/1', () => HttpResponse.error()))
+
+    await s.dispatch(tasksApi.endpoints.deleteTask.initiate({ id: '1', silent: true }))
+
+    await waitFor(() => expect(getCachedTasks(s)).toHaveLength(2))
+    expect(s.getState().toast.message).toBeNull()
   })
 })
