@@ -52,9 +52,9 @@ export const tasksApi = createApi({
       },
     }),
 
-    completeTask: builder.mutation<Task, string>({
-      query: (id) => ({ url: `/tasks/${id}/complete`, method: 'POST' }),
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+    completeTask: builder.mutation<Task, { id: string; silent?: boolean }>({
+      query: ({ id }) => ({ url: `/tasks/${id}/complete`, method: 'POST' }),
+      async onQueryStarted({ id, silent }, { dispatch, queryFulfilled }) {
         const patchResult = dispatch(
           tasksApi.util.updateQueryData('getTasks', undefined, (draft) => {
             const task = draft.find((t) => t.id === id)
@@ -68,7 +68,7 @@ export const tasksApi = createApi({
           await queryFulfilled
         } catch {
           patchResult.undo()
-          dispatch(showToast('Something went wrong.'))
+          if (!silent) dispatch(showToast('Something went wrong.'))
         }
       },
     }),
@@ -94,9 +94,9 @@ export const tasksApi = createApi({
       },
     }),
 
-    deleteTask: builder.mutation<string, string>({
-      query: (id) => ({ url: `/tasks/${id}`, method: 'DELETE' }),
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+    deleteTask: builder.mutation<string, { id: string; silent?: boolean }>({
+      query: ({ id }) => ({ url: `/tasks/${id}`, method: 'DELETE' }),
+      async onQueryStarted({ id, silent }, { dispatch, queryFulfilled }) {
         const patchResult = dispatch(
           tasksApi.util.updateQueryData('getTasks', undefined, (draft) => {
             const index = draft.findIndex((t) => t.id === id)
@@ -107,7 +107,7 @@ export const tasksApi = createApi({
           await queryFulfilled
         } catch {
           patchResult.undo()
-          dispatch(showToast('Something went wrong.'))
+          if (!silent) dispatch(showToast('Something went wrong.'))
         }
       },
     }),

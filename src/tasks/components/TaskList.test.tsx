@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { Provider } from 'react-redux'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { Toast } from '../../app/Toast'
 import toastSlice from '../../app/toastSlice'
 import { tasksApi } from '../api/tasksApi'
 import { TaskList } from './TaskList'
@@ -37,6 +38,7 @@ function renderWithStore() {
   return render(
     <Provider store={store}>
       <TaskList />
+      <Toast />
     </Provider>
   )
 }
@@ -160,6 +162,38 @@ describe('TaskList', () => {
     await waitFor(() => expect(deleteCalled).toBe(true))
   })
 
+  it('shows the generic toast when a single-item complete fails', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([{ id: '1', text: 'Buy milk', completed: false, createdDate: 1 }])
+      )
+    )
+    server.use(http.post('http://localhost/tasks/1/complete', () => HttpResponse.error()))
+
+    renderWithStore()
+
+    await user.click(await screen.findByRole('button', { name: /mark complete/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Something went wrong.')
+  })
+
+  it('shows the generic toast when a single-item delete fails', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([{ id: '1', text: 'Buy milk', completed: false, createdDate: 1 }])
+      )
+    )
+    server.use(http.delete('http://localhost/tasks/1', () => HttpResponse.error()))
+
+    renderWithStore()
+
+    await user.click(await screen.findByRole('button', { name: /delete/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Something went wrong.')
+  })
+
   it('only active tasks are shown when the Active filter is selected', async () => {
     const user = userEvent.setup()
     server.use(
@@ -219,5 +253,172 @@ describe('TaskList', () => {
 
     expect(screen.getByText('Buy milk')).toBeInTheDocument()
     expect(screen.getByText('Walk dog')).toBeInTheDocument()
+  })
+})
+
+describe('bulk action error feedback', () => {
+  it('shows no toast when Complete all succeeds for every task', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: false, createdDate: 2 },
+        ])
+      )
+    )
+    server.use(
+      http.post('http://localhost/tasks/:id/complete', ({ params }) =>
+        HttpResponse.json({ id: params.id, text: 'x', completed: true, createdDate: 1, completedDate: 2 })
+      )
+    )
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /complete all/i }))
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: /mark incomplete/i })).toHaveLength(2)
+    )
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows a toast and reverts only the failed task when Complete all partially fails', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: false, createdDate: 2 },
+        ])
+      )
+    )
+    server.use(
+      http.post('http://localhost/tasks/:id/complete', ({ params }) => {
+        if (params.id === '2') return HttpResponse.error()
+        return HttpResponse.json({ id: params.id, text: 'x', completed: true, createdDate: 1, completedDate: 2 })
+      })
+    )
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /complete all/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Failed to complete 1 of 2 tasks.')
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Mark incomplete' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mark complete' })).toBeInTheDocument()
+    })
+  })
+
+  it('re-enables the bulk action buttons after Complete all partially fails', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: false, createdDate: 2 },
+        ])
+      )
+    )
+    server.use(
+      http.post('http://localhost/tasks/:id/complete', ({ params }) => {
+        if (params.id === '2') return HttpResponse.error()
+        return HttpResponse.json({ id: params.id, text: 'x', completed: true, createdDate: 1, completedDate: 2 })
+      })
+    )
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /complete all/i }))
+
+    await screen.findByRole('status')
+    expect(screen.getByRole('button', { name: /complete all/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /clear done/i })).toBeEnabled()
+  })
+
+  it('shows "Failed to complete all tasks." when every task in Complete all fails', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: false, createdDate: 2 },
+        ])
+      )
+    )
+    server.use(http.post('http://localhost/tasks/:id/complete', () => HttpResponse.error()))
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /complete all/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Failed to complete all tasks.')
+  })
+
+  it('shows a toast and restores only the failed task when Clear done partially fails', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: true, createdDate: 1, completedDate: 2 },
+          { id: '2', text: 'Walk dog', completed: true, createdDate: 3, completedDate: 4 },
+        ])
+      )
+    )
+    server.use(
+      http.delete('http://localhost/tasks/:id', ({ params }) => {
+        if (params.id === '2') return HttpResponse.error()
+        return HttpResponse.json('deleted')
+      })
+    )
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /clear done/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Failed to delete 1 of 2 tasks.')
+    await waitFor(() => expect(screen.getByText('Walk dog')).toBeInTheDocument())
+    expect(screen.queryByText('Buy milk')).not.toBeInTheDocument()
+  })
+
+  it('shows "Failed to delete all tasks." when every task in Clear done fails', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([{ id: '1', text: 'Buy milk', completed: true, createdDate: 1, completedDate: 2 }])
+      )
+    )
+    server.use(http.delete('http://localhost/tasks/:id', () => HttpResponse.error()))
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /clear done/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Failed to delete all tasks.')
+  })
+
+  it('shows no toast when Clear done succeeds for every task', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([{ id: '1', text: 'Buy milk', completed: true, createdDate: 1, completedDate: 2 }])
+      )
+    )
+    server.use(http.delete('http://localhost/tasks/:id', () => HttpResponse.json('deleted')))
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /clear done/i }))
+
+    await waitFor(() => expect(screen.queryByText('Buy milk')).not.toBeInTheDocument())
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 })

@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
+import { useAppDispatch } from '../../app/store'
+import { showToast } from '../../app/toastSlice'
 import {
   useCompleteTaskMutation,
   useDeleteTaskMutation,
@@ -12,7 +14,17 @@ import { AddTaskForm } from './AddTaskForm'
 import { Footer } from './Footer'
 import { TaskItem } from './TaskItem'
 
+function buildBulkErrorMessage(action: 'complete' | 'delete', failed: number, total: number): string {
+  if (failed === total) {
+    return action === 'complete' ? 'Failed to complete all tasks.' : 'Failed to delete all tasks.'
+  }
+  return action === 'complete'
+    ? `Failed to complete ${failed} of ${total} tasks.`
+    : `Failed to delete ${failed} of ${total} tasks.`
+}
+
 export function TaskList() {
+  const dispatch = useAppDispatch()
   const { data, isLoading, isError } = useGetTasksQuery()
   const [completeTask] = useCompleteTaskMutation()
   const [incompleteTask] = useIncompleteTaskMutation()
@@ -49,7 +61,13 @@ export function TaskList() {
     const active = filteredTasks.filter((t) => !t.completed)
     setIsBulkLoading(true)
     try {
-      await Promise.allSettled(active.map((t) => completeTask(t.id)))
+      const results = await Promise.allSettled(
+        active.map((t) => completeTask({ id: t.id, silent: true }).unwrap())
+      )
+      const failedCount = results.filter((r) => r.status === 'rejected').length
+      if (failedCount > 0) {
+        dispatch(showToast(buildBulkErrorMessage('complete', failedCount, active.length)))
+      }
     } finally {
       setIsBulkLoading(false)
     }
@@ -59,7 +77,13 @@ export function TaskList() {
     const done = allTasks.filter((t) => t.completed)
     setIsBulkLoading(true)
     try {
-      await Promise.allSettled(done.map((t) => deleteTask(t.id)))
+      const results = await Promise.allSettled(
+        done.map((t) => deleteTask({ id: t.id, silent: true }).unwrap())
+      )
+      const failedCount = results.filter((r) => r.status === 'rejected').length
+      if (failedCount > 0) {
+        dispatch(showToast(buildBulkErrorMessage('delete', failedCount, done.length)))
+      }
     } finally {
       setIsBulkLoading(false)
     }
@@ -82,9 +106,9 @@ export function TaskList() {
               <TaskItem
                 task={task}
                 onToggle={(id) =>
-                  task.completed ? incompleteTask(id) : completeTask(id)
+                  task.completed ? incompleteTask(id) : completeTask({ id })
                 }
-                onDelete={(id) => deleteTask(id)}
+                onDelete={(id) => deleteTask({ id })}
                 onRename={(id, text) => updateTaskText({ id, text })}
               />
             </motion.li>
