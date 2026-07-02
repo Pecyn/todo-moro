@@ -8,8 +8,7 @@ const BASE_URL = 'http://localhost:8080'
 const FAILING_TASK_IDS = new Set(['vzgMLPq7j_xKSz7O3Jm2B'])
 
 export const handlers = [
-  // GET /tasks is mocked twice to simulate a network error on the first request,
-  // then a successful response on the second request (for testing the retry button in the error state)
+  // GET /tasks is mocked to simulate a network error on the first request
   http.get(
     `${BASE_URL}/tasks`,
     async () => {
@@ -27,8 +26,10 @@ export const handlers = [
     return passthrough()
   }),
   http.post(`${BASE_URL}/tasks/:id`, () => passthrough()),
+  // DELETE /tasks/:id is mocked to simulate a network error for certain task IDs,
+  // for testing bulk action error feedback in the browser
   http.delete(`${BASE_URL}/tasks/:id`, async ({ params }) => {
-    await delay(3000)
+    await delay(2000)
     if (FAILING_TASK_IDS.has(params.id as string)) {
       return HttpResponse.error()
     }
