@@ -2,6 +2,13 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Manual testing with mocked errors
+
+`pnpm dev:mocks` starts the app with specific task IDs (see `FAILING_TASK_IDS` in
+`src/mocks/handlers.ts`) forced to fail on complete/delete, for manually exercising
+the bulk action error toast. Normal `pnpm dev` is unaffected and always talks to the
+real backend.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
