@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { Provider } from 'react-redux'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { Toast } from '../../app/Toast'
 import toastSlice from '../../app/toastSlice'
 import { tasksApi } from '../api/tasksApi'
 import { AddTaskForm } from './AddTaskForm'
@@ -78,5 +79,19 @@ describe('AddTaskForm', () => {
     await user.type(screen.getByRole('textbox'), '  Buy milk  ')
     await user.click(screen.getByRole('button', { name: /add/i }))
     await waitFor(() => expect(requestBody).toEqual({ text: 'Buy milk' }))
+  })
+
+  it('shows the generic toast when POST /tasks fails', async () => {
+    server.use(http.post('http://localhost/tasks', () => HttpResponse.error()))
+    const user = userEvent.setup()
+    render(
+      <Provider store={makeStore()}>
+        <AddTaskForm />
+        <Toast />
+      </Provider>
+    )
+    await user.type(screen.getByRole('textbox'), 'Buy milk')
+    await user.click(screen.getByRole('button', { name: /add/i }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Something went wrong.')
   })
 })
