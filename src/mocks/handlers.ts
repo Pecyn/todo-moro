@@ -1,4 +1,4 @@
-import { http, HttpResponse, passthrough } from 'msw'
+import { http, HttpResponse, passthrough, delay } from 'msw'
 
 const BASE_URL = 'http://localhost:8080'
 
@@ -11,6 +11,15 @@ const FAILING_TASK_IDS = new Set([
 ])
 
 export const handlers = [
+  // GET /tasks is mocked twice to simulate a network error on the first request,
+  // then a successful response on the second request (for testing the retry button in the error state)
+  http.get(`${BASE_URL}/tasks`, () => HttpResponse.error(), { once: true }),
+  http.get(`${BASE_URL}/tasks`, async () => {
+    await delay(1500)
+    return passthrough()
+  }),
+  // POST /tasks/:id/complete and DELETE /tasks/:id are mocked to simulate a network error for certain task IDs,
+  // for testing bulk action error feedback in the browser
   http.post(`${BASE_URL}/tasks/:id/complete`, ({ params }) => {
     if (FAILING_TASK_IDS.has(params.id as string)) {
       return HttpResponse.error()

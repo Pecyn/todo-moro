@@ -14,6 +14,7 @@ import { AddTaskForm } from './AddTaskForm'
 import { Footer } from './Footer'
 import { TaskItem } from './TaskItem'
 import { TaskListEmptyState } from './TaskListEmptyState'
+import { TaskListErrorState } from './TaskListErrorState'
 
 function buildBulkErrorMessage(action: 'complete' | 'delete', failed: number, total: number): string {
   if (failed === total) {
@@ -26,7 +27,7 @@ function buildBulkErrorMessage(action: 'complete' | 'delete', failed: number, to
 
 export function TaskList() {
   const dispatch = useAppDispatch()
-  const { data, isLoading, isError } = useGetTasksQuery()
+  const { data, isLoading, isFetching, isError, refetch } = useGetTasksQuery()
   const [completeTask] = useCompleteTaskMutation()
   const [incompleteTask] = useIncompleteTaskMutation()
   const [deleteTask] = useDeleteTaskMutation()
@@ -34,7 +35,9 @@ export function TaskList() {
   const [filter, setFilter] = useState<Filter>('all')
   const [isBulkLoading, setIsBulkLoading] = useState(false)
 
-  if (isLoading) {
+  // isLoading is only true for the very first fetch (no cached data yet); it stays
+  // false on a refetch() call, so isFetching is needed too to cover the retry window.
+  if (isLoading || isFetching) {
     return (
       <div className="flex flex-col gap-2">
         <span className="sr-only">Loading tasks…</span>
@@ -50,7 +53,7 @@ export function TaskList() {
   }
 
   if (isError) {
-    return <p>Something went wrong while loading tasks.</p>
+    return <TaskListErrorState onRetry={refetch} />
   }
 
   const allTasks = data ?? []

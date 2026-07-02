@@ -73,7 +73,7 @@ describe('TaskList', () => {
 
     renderWithStore()
 
-    expect(await screen.findByText(/something went wrong/i)).toBeInTheDocument()
+    expect(await screen.findByText(/couldn't load your tasks/i)).toBeInTheDocument()
   })
 
   it('renders an edit button for each task returned by GET /tasks', async () => {
@@ -314,6 +314,62 @@ describe('empty states', () => {
     expect(screen.queryByText('No tasks yet. Add your first task above.')).not.toBeInTheDocument()
     expect(screen.queryByText('No active tasks.')).not.toBeInTheDocument()
     expect(screen.queryByText('No completed tasks yet.')).not.toBeInTheDocument()
+  })
+})
+
+describe('error state', () => {
+  it('hides AddTaskForm and Footer while the error state is shown', async () => {
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.error()))
+
+    renderWithStore()
+
+    await screen.findByText(/couldn't load your tasks/i)
+    expect(screen.queryByPlaceholderText('New task…')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^all$/i })).not.toBeInTheDocument()
+  })
+
+  it('announces the error via role="status"', async () => {
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.error()))
+
+    renderWithStore()
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/couldn't load your tasks/i)
+  })
+
+  it('shows a retry button', async () => {
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.error()))
+
+    renderWithStore()
+
+    expect(await screen.findByRole('button', { name: /retry/i })).toBeInTheDocument()
+  })
+
+  it('recovers to the task list when Retry is clicked after GET /tasks succeeds', async () => {
+    const user = userEvent.setup()
+    let resolveRetry: (response: Response) => void = () => {}
+    const retryResponse = new Promise<Response>((resolve) => {
+      resolveRetry = resolve
+    })
+    server.use(
+      http.get('http://localhost/tasks', () => HttpResponse.error(), { once: true }),
+      http.get('http://localhost/tasks', () => retryResponse)
+    )
+
+    renderWithStore()
+    await screen.findByText(/couldn't load your tasks/i)
+
+    await user.click(screen.getByRole('button', { name: /retry/i }))
+
+    await waitFor(() => expect(screen.getAllByTestId('task-skeleton')).toHaveLength(3))
+    expect(screen.queryByText(/couldn't load your tasks/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('No tasks yet. Add your first task above.')).not.toBeInTheDocument()
+
+    resolveRetry(
+      HttpResponse.json([{ id: '1', text: 'Buy milk', completed: false, createdDate: 1 }])
+    )
+
+    expect(await screen.findByText('Buy milk')).toBeInTheDocument()
+    expect(screen.queryByText(/couldn't load your tasks/i)).not.toBeInTheDocument()
   })
 })
 
