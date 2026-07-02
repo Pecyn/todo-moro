@@ -39,7 +39,11 @@ export function TaskList() {
   const [deleteTask] = useDeleteTaskMutation()
   const [updateTaskText] = useUpdateTaskTextMutation()
   const [filter, setFilter] = useState<Filter>('all')
-  const [isBulkLoading, setIsBulkLoading] = useState(false)
+  // Tracks which bulk action is currently running (not just whether one is),
+  // so the Footer can show a loading label only on the button that's actually active.
+  const [bulkAction, setBulkAction] = useState<'complete' | 'clear' | null>(
+    null
+  )
 
   // isLoading is only true for the very first fetch (no cached data yet); it stays
   // false on a refetch() call, so isFetching is needed too to cover the retry window.
@@ -69,7 +73,7 @@ export function TaskList() {
 
   async function handleCompleteAllVisible() {
     const active = filteredTasks.filter((t) => !t.completed)
-    setIsBulkLoading(true)
+    setBulkAction('complete')
     try {
       const results = await Promise.allSettled(
         active.map((t) => completeTask({ id: t.id, silent: true }).unwrap())
@@ -83,13 +87,13 @@ export function TaskList() {
         )
       }
     } finally {
-      setIsBulkLoading(false)
+      setBulkAction(null)
     }
   }
 
   async function handleClearDone() {
     const done = allTasks.filter((t) => t.completed)
-    setIsBulkLoading(true)
+    setBulkAction('clear')
     try {
       const results = await Promise.allSettled(
         done.map((t) => deleteTask({ id: t.id, silent: true }).unwrap())
@@ -101,7 +105,7 @@ export function TaskList() {
         )
       }
     } finally {
-      setIsBulkLoading(false)
+      setBulkAction(null)
     }
   }
 
@@ -144,7 +148,7 @@ export function TaskList() {
           onFilterChange={setFilter}
           onClearDone={handleClearDone}
           onCompleteAllVisible={handleCompleteAllVisible}
-          isBulkLoading={isBulkLoading}
+          bulkAction={bulkAction}
         />
       </motion.div>
     </>

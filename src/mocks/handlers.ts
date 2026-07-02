@@ -18,10 +18,6 @@ export const handlers = [
     },
     { once: true }
   ),
-  http.get(`${BASE_URL}/tasks`, async () => {
-    await delay(1500)
-    return passthrough()
-  }),
   // POST /tasks/:id/complete and DELETE /tasks/:id are mocked to simulate a network error for certain task IDs,
   // for testing bulk action error feedback in the browser
   http.post(`${BASE_URL}/tasks/:id/complete`, ({ params }) => {
@@ -31,7 +27,8 @@ export const handlers = [
     return passthrough()
   }),
   http.post(`${BASE_URL}/tasks/:id`, () => passthrough()),
-  http.delete(`${BASE_URL}/tasks/:id`, ({ params }) => {
+  http.delete(`${BASE_URL}/tasks/:id`, async ({ params }) => {
+    await delay(3000)
     if (FAILING_TASK_IDS.has(params.id as string)) {
       return HttpResponse.error()
     }

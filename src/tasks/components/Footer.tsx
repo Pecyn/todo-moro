@@ -6,7 +6,7 @@ interface Props {
   onFilterChange: (filter: Filter) => void
   onClearDone: () => void
   onCompleteAllVisible: () => void
-  isBulkLoading: boolean
+  bulkAction: 'complete' | 'clear' | null
 }
 
 const PILLS: { label: string; value: Filter }[] = [
@@ -15,7 +15,14 @@ const PILLS: { label: string; value: Filter }[] = [
   { label: 'Done', value: 'done' },
 ]
 
-export function Footer({ tasks, filter, onFilterChange, onClearDone, onCompleteAllVisible, isBulkLoading }: Props) {
+export function Footer({
+  tasks,
+  filter,
+  onFilterChange,
+  onClearDone,
+  onCompleteAllVisible,
+  bulkAction,
+}: Props) {
   const completedCount = tasks.filter((t) => t.completed).length
   const totalCount = tasks.length
 
@@ -24,9 +31,15 @@ export function Footer({ tasks, filter, onFilterChange, onClearDone, onCompleteA
   )
   const activeVisible = filteredVisible.filter((t) => !t.completed)
 
+  const isBulkLoading = bulkAction !== null
+  const canCompleteAll = activeVisible.length > 0
+  const canClearDone = completedCount > 0
+
   return (
     <div className="flex items-center justify-between gap-4 mt-4 text-sm">
-      <span className="shrink-0 text-gray-500">{completedCount} of {totalCount} completed</span>
+      <span className="shrink-0 text-gray-500">
+        {completedCount} of {totalCount} completed
+      </span>
 
       <div className="flex items-center gap-2">
         {PILLS.map(({ label, value }) => (
@@ -35,34 +48,31 @@ export function Footer({ tasks, filter, onFilterChange, onClearDone, onCompleteA
             onClick={() => onFilterChange(value)}
             disabled={isBulkLoading}
             className={
-              filter === value
+              (filter === value
                 ? 'rounded-full bg-gray-900 px-3 py-1 text-white'
-                : 'rounded-full border border-gray-200 px-3 py-1 text-gray-900'
+                : 'rounded-full border border-gray-200 px-3 py-1 text-gray-900') +
+              ' disabled:opacity-40 disabled:cursor-not-allowed'
             }
           >
             {label}
           </button>
         ))}
-        {activeVisible.length > 0 && (
-          <button
-            onClick={onCompleteAllVisible}
-            disabled={isBulkLoading}
-            className="ml-2 underline text-gray-500 hover:text-gray-900"
-          >
-            Complete all
-          </button>
-        )}
+        <button
+          onClick={onCompleteAllVisible}
+          disabled={isBulkLoading || !canCompleteAll}
+          className="ml-2 underline text-gray-500 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {bulkAction === 'complete' ? 'Completing…' : 'Complete all'}
+        </button>
       </div>
 
-      {completedCount > 0 && (
-        <button
-          onClick={onClearDone}
-          disabled={isBulkLoading}
-          className="shrink-0 underline text-gray-500 hover:text-red-500"
-        >
-          Clear done
-        </button>
-      )}
+      <button
+        onClick={onClearDone}
+        disabled={isBulkLoading || !canClearDone}
+        className="shrink-0 underline text-gray-500 hover:text-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {bulkAction === 'clear' ? 'Clearing…' : 'Clear done'}
+      </button>
     </div>
   )
 }
