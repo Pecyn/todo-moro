@@ -360,6 +360,40 @@ describe('bulk action error feedback', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Failed to complete all tasks.')
   })
 
+  it('does not duplicate tasks when Complete all partially fails across several concurrent completions', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Task 1', completed: false, createdDate: 1 },
+          { id: '2', text: 'Task 2', completed: false, createdDate: 2 },
+          { id: '3', text: 'Task 3', completed: false, createdDate: 3 },
+          { id: '4', text: 'Task 4', completed: false, createdDate: 4 },
+        ])
+      )
+    )
+    server.use(
+      http.post('http://localhost/tasks/:id/complete', ({ params }) => {
+        if (params.id === '2' || params.id === '3') return HttpResponse.error()
+        return HttpResponse.json({ id: params.id, text: 'x', completed: true, createdDate: 1, completedDate: 2 })
+      })
+    )
+
+    renderWithStore()
+    await screen.findByText('Task 1')
+
+    await user.click(screen.getByRole('button', { name: /complete all/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Failed to complete 2 of 4 tasks.')
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /mark incomplete/i })).toHaveLength(2)
+    })
+    expect(screen.getAllByText('Task 1')).toHaveLength(1)
+    expect(screen.getAllByText('Task 2')).toHaveLength(1)
+    expect(screen.getAllByText('Task 3')).toHaveLength(1)
+    expect(screen.getAllByText('Task 4')).toHaveLength(1)
+  })
+
   it('shows a toast and restores only the failed task when Clear done partially fails', async () => {
     const user = userEvent.setup()
     server.use(
@@ -385,6 +419,39 @@ describe('bulk action error feedback', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Failed to delete 1 of 2 tasks.')
     await waitFor(() => expect(screen.getByText('Walk dog')).toBeInTheDocument())
     expect(screen.queryByText('Buy milk')).not.toBeInTheDocument()
+  })
+
+  it('does not duplicate tasks when Clear done partially fails across several concurrent deletes', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Task 1', completed: true, createdDate: 1, completedDate: 2 },
+          { id: '2', text: 'Task 2', completed: true, createdDate: 3, completedDate: 4 },
+          { id: '3', text: 'Task 3', completed: true, createdDate: 5, completedDate: 6 },
+          { id: '4', text: 'Task 4', completed: true, createdDate: 7, completedDate: 8 },
+        ])
+      )
+    )
+    server.use(
+      http.delete('http://localhost/tasks/:id', ({ params }) => {
+        if (params.id === '2' || params.id === '3') return HttpResponse.error()
+        return HttpResponse.json('deleted')
+      })
+    )
+
+    renderWithStore()
+    await screen.findByText('Task 1')
+
+    await user.click(screen.getByRole('button', { name: /clear done/i }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Failed to delete 2 of 4 tasks.')
+    await waitFor(() => {
+      expect(screen.queryByText('Task 1')).not.toBeInTheDocument()
+      expect(screen.queryByText('Task 4')).not.toBeInTheDocument()
+    })
+    expect(screen.getAllByText('Task 2')).toHaveLength(1)
+    expect(screen.getAllByText('Task 3')).toHaveLength(1)
   })
 
   it('shows "Failed to delete all tasks." when every task in Clear done fails', async () => {
