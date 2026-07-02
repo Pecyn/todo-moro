@@ -16,9 +16,15 @@ import { TaskItem } from './TaskItem'
 import { TaskListEmptyState } from './TaskListEmptyState'
 import { TaskListErrorState } from './TaskListErrorState'
 
-function buildBulkErrorMessage(action: 'complete' | 'delete', failed: number, total: number): string {
+function buildBulkErrorMessage(
+  action: 'complete' | 'delete',
+  failed: number,
+  total: number
+): string {
   if (failed === total) {
-    return action === 'complete' ? 'Failed to complete all tasks.' : 'Failed to delete all tasks.'
+    return action === 'complete'
+      ? 'Failed to complete all tasks.'
+      : 'Failed to delete all tasks.'
   }
   return action === 'complete'
     ? `Failed to complete ${failed} of ${total} tasks.`
@@ -45,7 +51,7 @@ export function TaskList() {
           <div
             key={i}
             data-testid="task-skeleton"
-            className="h-14 animate-pulse rounded-lg border border-gray-200 p-4"
+            className="h-14 animate-pulse rounded-lg border border-gray-200 bg-gray-100 p-4"
           />
         ))}
       </div>
@@ -70,7 +76,11 @@ export function TaskList() {
       )
       const failedCount = results.filter((r) => r.status === 'rejected').length
       if (failedCount > 0) {
-        dispatch(showToast(buildBulkErrorMessage('complete', failedCount, active.length)))
+        dispatch(
+          showToast(
+            buildBulkErrorMessage('complete', failedCount, active.length)
+          )
+        )
       }
     } finally {
       setIsBulkLoading(false)
@@ -86,7 +96,9 @@ export function TaskList() {
       )
       const failedCount = results.filter((r) => r.status === 'rejected').length
       if (failedCount > 0) {
-        dispatch(showToast(buildBulkErrorMessage('delete', failedCount, done.length)))
+        dispatch(
+          showToast(buildBulkErrorMessage('delete', failedCount, done.length))
+        )
       }
     } finally {
       setIsBulkLoading(false)
@@ -126,14 +138,14 @@ export function TaskList() {
         </ul>
       )}
       <motion.div layout>
-      <Footer
-        tasks={allTasks}
-        filter={filter}
-        onFilterChange={setFilter}
-        onClearDone={handleClearDone}
-        onCompleteAllVisible={handleCompleteAllVisible}
-        isBulkLoading={isBulkLoading}
-      />
+        <Footer
+          tasks={allTasks}
+          filter={filter}
+          onFilterChange={setFilter}
+          onClearDone={handleClearDone}
+          onCompleteAllVisible={handleCompleteAllVisible}
+          isBulkLoading={isBulkLoading}
+        />
       </motion.div>
     </>
   )

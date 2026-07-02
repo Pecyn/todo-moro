@@ -28,7 +28,7 @@ export function AddTaskForm() {
       <button
         type="submit"
         disabled={!text.trim()}
-        className="w-20 rounded-lg bg-gray-900 text-white py-2 hover:bg-gray-700 disabled:opacity-40"
+        className="w-20 rounded-lg bg-green-600 text-white py-2 hover:bg-green-700 disabled:opacity-40"
       >
         Add
       </button>
