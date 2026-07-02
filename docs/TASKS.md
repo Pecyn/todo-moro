@@ -15,7 +15,7 @@
 - [x] Tailwind styling per approved design, mobile responsive
 - [x] Framer Motion animations + checkmark draw animation
 - [x] Error handling — toast on single-item mutation failure
-- [ ] Empty state UI — when task list is empty
+- [x] Empty state UI — when task list is empty
 - [ ] Error state UI — when GET /tasks fails (currently renders but unstyled)
 
 ## Phase 3 — Quality & delivery

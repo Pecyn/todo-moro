@@ -256,6 +256,67 @@ describe('TaskList', () => {
   })
 })
 
+describe('empty states', () => {
+  it('shows the empty-state illustration and message when there are no tasks at all', async () => {
+    server.use(http.get('http://localhost/tasks', () => HttpResponse.json([])))
+
+    renderWithStore()
+
+    expect(await screen.findByTestId('empty-state-icon')).toBeInTheDocument()
+    expect(screen.getByText('No tasks yet. Add your first task above.')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('New task…')).toBeInTheDocument()
+    expect(screen.getByText('0 of 0 completed')).toBeInTheDocument()
+  })
+
+  it('shows a filtered-empty message when the Done filter matches no tasks, and restores the list when switching back to All', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: false, createdDate: 2 },
+        ])
+      )
+    )
+
+    renderWithStore()
+    await screen.findByText('Buy milk')
+
+    await user.click(screen.getByRole('button', { name: /^done$/i }))
+
+    expect(screen.getByText('No completed tasks yet.')).toBeInTheDocument()
+    expect(screen.queryByText('Buy milk')).not.toBeInTheDocument()
+    expect(screen.queryByText('Walk dog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^all$/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^all$/i }))
+
+    expect(screen.getByText('Buy milk')).toBeInTheDocument()
+    expect(screen.getByText('Walk dog')).toBeInTheDocument()
+    expect(screen.queryByText('No completed tasks yet.')).not.toBeInTheDocument()
+  })
+
+  it('does not show any empty-state message when the All filter has matching tasks', async () => {
+    server.use(
+      http.get('http://localhost/tasks', () =>
+        HttpResponse.json([
+          { id: '1', text: 'Buy milk', completed: false, createdDate: 1 },
+          { id: '2', text: 'Walk dog', completed: true, createdDate: 2, completedDate: 3 },
+        ])
+      )
+    )
+
+    renderWithStore()
+
+    expect(await screen.findByText('Buy milk')).toBeInTheDocument()
+    expect(screen.getByText('Walk dog')).toBeInTheDocument()
+    expect(screen.queryByTestId('empty-state-icon')).not.toBeInTheDocument()
+    expect(screen.queryByText('No tasks yet. Add your first task above.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No active tasks.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No completed tasks yet.')).not.toBeInTheDocument()
+  })
+})
+
 describe('bulk action error feedback', () => {
   it('shows no toast when Complete all succeeds for every task', async () => {
     const user = userEvent.setup()

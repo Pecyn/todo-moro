@@ -13,6 +13,7 @@ import type { Filter } from '../types'
 import { AddTaskForm } from './AddTaskForm'
 import { Footer } from './Footer'
 import { TaskItem } from './TaskItem'
+import { TaskListEmptyState } from './TaskListEmptyState'
 
 function buildBulkErrorMessage(action: 'complete' | 'delete', failed: number, total: number): string {
   if (failed === total) {
@@ -92,29 +93,35 @@ export function TaskList() {
   return (
     <>
       <AddTaskForm />
-      <ul className="flex flex-col gap-2 mt-4">
-        <AnimatePresence mode="popLayout">
-          {filteredTasks.map((task) => (
-            <motion.li
-              key={task.id}
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: 48 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              layout
-            >
-              <TaskItem
-                task={task}
-                onToggle={(id) =>
-                  task.completed ? incompleteTask(id) : completeTask({ id })
-                }
-                onDelete={(id) => deleteTask({ id })}
-                onRename={(id, text) => updateTaskText({ id, text })}
-              />
-            </motion.li>
-          ))}
-        </AnimatePresence>
-      </ul>
+      {allTasks.length === 0 ? (
+        <TaskListEmptyState variant="no-tasks" />
+      ) : filteredTasks.length === 0 ? (
+        <TaskListEmptyState variant="no-filtered-tasks" filter={filter} />
+      ) : (
+        <ul className="flex flex-col gap-2 mt-4">
+          <AnimatePresence mode="popLayout">
+            {filteredTasks.map((task) => (
+              <motion.li
+                key={task.id}
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: 48 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                layout
+              >
+                <TaskItem
+                  task={task}
+                  onToggle={(id) =>
+                    task.completed ? incompleteTask(id) : completeTask({ id })
+                  }
+                  onDelete={(id) => deleteTask({ id })}
+                  onRename={(id, text) => updateTaskText({ id, text })}
+                />
+              </motion.li>
+            ))}
+          </AnimatePresence>
+        </ul>
+      )}
       <motion.div layout>
       <Footer
         tasks={allTasks}
